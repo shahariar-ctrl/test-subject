@@ -214,6 +214,22 @@
     header.site.header-hidden{
       transform:translateY(-100%);
     }
+    /* Hard guarantee: whatever JS timing/scroll-event races happen,
+       the header can never be hidden while the mobile menu is open.
+       This CSS rule always wins over .header-hidden's transform.
+       It also switches the header from sticky -> fixed while the menu
+       is open: openMobileMenu() locks background scroll by setting
+       body{position:fixed;top:-scrollY} (to stop iOS rubber-banding),
+       and that shift drags any position:sticky descendant — including
+       this header — up along with it, so if the page was scrolled down
+       before the menu opened, the header would end up pushed off the
+       top of the screen even though its transform was translateY(0).
+       Forcing position:fixed here re-anchors it to the real viewport,
+       independent of the body's own fixed-position offset. */
+    body.mobile-menu-open header.site{
+      position:fixed;top:0;left:0;right:0;
+      transform:translateY(0) !important;
+    }
     .site-inner{
       max-width:560px;margin:0 auto;padding:14px 16px;display:flex;flex-wrap:wrap;
       align-items:center;justify-content:space-between;gap:10px 12px;
@@ -2346,6 +2362,7 @@
     }
     else clearGlobalSearch();
   }
+  let mmScrollY = 0;
   function openMobileMenu(){
     document.getElementById('mobileMenuOverlay').classList.add('open');
     const btn = document.getElementById('menuBtn');
@@ -2353,6 +2370,17 @@
     btn.setAttribute('aria-expanded','true');
     const header = document.querySelector('header.site');
     if(header) header.classList.remove('header-hidden');
+    document.body.classList.add('mobile-menu-open');
+    // iOS-safe scroll lock: overflow:hidden alone still lets Safari
+    // rubber-band/scroll the page, which was re-firing the header's
+    // hide-on-scroll listener while the menu was open. Pinning the
+    // body with position:fixed blocks that completely.
+    mmScrollY = window.scrollY || window.pageYOffset || 0;
+    document.body.style.position = 'fixed';
+    document.body.style.top = (-mmScrollY) + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
     document.body.style.overflow='hidden';
     lenis.stop();
   }
@@ -2361,8 +2389,18 @@
     const btn = document.getElementById('menuBtn');
     btn.classList.remove('open');
     btn.setAttribute('aria-expanded','false');
+    document.body.classList.remove('mobile-menu-open');
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
     document.body.style.overflow='';
+    window.scrollTo(0, mmScrollY);
     lenis.start();
+    // resync the scroll-hide tracker so the header doesn't misbehave
+    // right after the menu closes (its old position may be stale)
+    if(typeof syncHeaderScrollY === 'function') syncHeaderScrollY();
   }
   function toggleMobileMenu(){
     const open = document.getElementById('mobileMenuOverlay').classList.contains('open');
@@ -2389,6 +2427,12 @@
     const TOP_GUARD = 40;         // always show near the very top
 
     function onScrollFrame(){
+      const overlay = document.getElementById('mobileMenuOverlay');
+      if(overlay && overlay.classList.contains('open')){
+        // menu is open — leave the header alone, don't let scroll hide it
+        ticking = false;
+        return;
+      }
       const y = window.scrollY || window.pageYOffset || 0;
       const diff = y - lastY;
       if(y <= TOP_GUARD){
@@ -2408,6 +2452,10 @@
         ticking = true;
       }
     }, {passive:true});
+    // exposed so closeMobileMenu() can resync after the menu closes
+    window.syncHeaderScrollY = function(){
+      lastY = window.scrollY || window.pageYOffset || 0;
+    };
   })();
   function globalSearch(val){
     const f = val.trim().toLowerCase();
