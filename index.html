@@ -204,16 +204,9 @@
     main, header, footer{position:relative;z-index:1;}
 
     header.site{
-      position:sticky;top:0;z-index:50;background:var(--header-bg);
+      position:fixed;top:0;left:0;right:0;z-index:50;background:var(--header-bg);
       backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);
       border-bottom:1px solid var(--border);
-      /* Safari/WebKit bug: a sticky element with backdrop-filter can lose
-         its compositing layer (and simply vanish) when another blurred
-         layer — here, the mobile menu overlay/panel — gets promoted above
-         it. Forcing this onto its own permanent layer stops Safari from
-         needing to re-promote it, which is what triggers the glitch. */
-      transform:translateZ(0);-webkit-transform:translateZ(0);
-      will-change:transform;
     }
     .site-inner{
       max-width:560px;margin:0 auto;padding:14px 16px;display:flex;flex-wrap:wrap;
@@ -365,7 +358,7 @@
     .gsr-pill.ac-2024,.gsr-pill.ac-pass{background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.14);color:#111;}
     .gsr-empty{font-family:var(--mono);font-size:12px;color:var(--dim);padding:8px 4px;}
 
-    main{padding-bottom:60px;}
+    main{padding-bottom:60px;padding-top:var(--header-h, 64px);}
 
     .glass{
       background:var(--surface);border:1px solid var(--border);border-radius:var(--r);
@@ -1900,6 +1893,24 @@
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <script>
   const { jsPDF } = window.jspdf || {};
+
+  /* ============================================================
+     HEADER HEIGHT SYNC — header is position:fixed (out of flow),
+     so main's top padding must track its real rendered height
+     (which changes across breakpoints, theme, and font load).
+     ============================================================ */
+  (function(){
+    const header = document.querySelector('header.site');
+    if(!header) return;
+    function syncHeaderHeight(){
+      document.documentElement.style.setProperty('--header-h', header.offsetHeight + 'px');
+    }
+    syncHeaderHeight();
+    window.addEventListener('resize', syncHeaderHeight);
+    window.addEventListener('load', syncHeaderHeight);
+    if(document.fonts && document.fonts.ready) document.fonts.ready.then(syncHeaderHeight);
+    if(window.ResizeObserver) new ResizeObserver(syncHeaderHeight).observe(header);
+  })();
 
   /* ============================================================
      LENIS — smooth scrolling
