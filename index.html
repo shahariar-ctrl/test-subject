@@ -291,34 +291,33 @@
       pointer-events:none;
     }
     .mobile-menu-overlay.open{pointer-events:auto;}
-    /* backdrop now spans the FULL width and slides in lockstep with the panel
-       (same distance, same duration/easing) so the tint sweeps in from the
-       right edge together with the panel instead of just fading in place */
+    /* backdrop spans the FULL width and slides in lockstep with the panel.
+       Its own width (100vw) is greater than the panel's (75vw), so to travel
+       at the SAME px/s speed as the panel it needs a longer duration:
+       .36s * (100/75) = .48s — same easing, same start moment, matched speed. */
     .mobile-menu-backdrop{
       position:absolute;inset:0;width:100%;height:100%;
-      background:var(--overlay-bg);cursor:pointer;
+      /* 30% more transparent than --overlay-bg (alpha x.7), blur carries the rest */
+      background:rgba(232,236,242,.39);cursor:pointer;
+      backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
       transform:translateX(100%);
-      transition:transform .36s cubic-bezier(.4,0,.2,1);
+      transition:transform .48s cubic-bezier(.4,0,.2,1);
     }
+    [data-theme="dark"] .mobile-menu-backdrop{background:rgba(6,8,14,.48);}
     .mobile-menu-overlay.open .mobile-menu-backdrop{transform:translateX(0);}
     .mobile-menu-panel{
       position:absolute;top:0;right:0;
       width:75%;max-width:75%;height:100%;
       display:flex;flex-direction:column;gap:26px;
-      background:var(--surface-hi);
-      backdrop-filter:blur(28px) saturate(180%);-webkit-backdrop-filter:blur(28px) saturate(180%);
+      /* 30% more transparent than --surface-hi (alpha x.7), blur carries the rest */
+      background:rgba(248,250,252,.67);
+      backdrop-filter:blur(12px) saturate(180%);-webkit-backdrop-filter:blur(12px) saturate(180%);
       border-left:1px solid var(--border);box-shadow:-12px 0 40px rgba(15,23,42,.10);
       padding:88px 20px 28px;overflow-y:auto;
       transform:translateX(100%);transition:transform .36s cubic-bezier(.4,0,.2,1);
     }
+    [data-theme="dark"] .mobile-menu-panel{background:rgba(24,32,48,.62);}
     .mobile-menu-overlay.open .mobile-menu-panel{transform:translateX(0);}
-    /* extra-strong blur on the 75%-width drawer panel — phone & large-phone only */
-    @media (max-width:767px){
-      .mobile-menu-panel{
-        backdrop-filter:blur(49px) saturate(180%);
-        -webkit-backdrop-filter:blur(49px) saturate(180%);
-      }
-    }
     .mm-section{display:flex;flex-direction:column;gap:14px;}
     .mm-section + .mm-section{padding-top:22px;border-top:1px solid var(--border);}
     .mm-label{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);}
